@@ -1,0 +1,48 @@
+pipeline {
+    agent any
+    environment {
+        //once you sign up for Docker hub, use that user_id here
+        registry = "sowjiterralogic/jenkins_image"
+        //- update your credentials ID after creating credentials for connecting to Docker Hub
+        registryCredential = '3476a136-3019-4d83-8617-7bbd87fcc92e'
+        dockerImage = ''
+    }
+
+    stages {
+        stage('Cloning Git') {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/sowjiterralogicc/docker_repo.git']]])
+            }
+        }
+
+    // Building Docker images
+    stage('Building image') {
+      steps{
+        script {
+          dockerImage = docker.build registry
+        }
+      }
+    }
+
+     // Uploading Docker images into Docker Hub
+    stage('Upload Image') {
+     steps{
+         script {
+            docker.withRegistry( '', registryCredential ) {
+            dockerImage.push()
+            }
+        }
+      }
+    }
+
+
+    // Running Docker container, make sure port 8096 is opened in
+    stage('Docker Run') {
+     steps{
+         script {
+            bat "docker run %registry%"
+         }
+      }
+    }
+  }
+}
